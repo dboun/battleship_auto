@@ -3,11 +3,14 @@ import numpy as np
 from typing import Callable
 
 from model_base import ModelBase
+from model_hardcoded import ModelHardcoded
 
 class Game:
     def __init__(self):
         self.player_1 = ModelBase()
-        self.player_2 = ModelBase()
+        # self.player_2 = ModelBase()
+        # self.player_1 = ModelHardcoded()
+        self.player_2 = ModelHardcoded()
 
         # History
         self.player_1_wins_history = []
@@ -39,7 +42,7 @@ class Game:
 
     def loop_play(self,
         report_board_callback: Callable[[bool, np.ndarray, np.ndarray, np.ndarray], None],
-        sleep_time: float = 0.1,
+        sleep_time: float = 0.5,
     ):
         current_player = random.choice([self.player_1, self.player_2])
         self.player_1_boats = self.player_1.place_boats(self.player_1_boats_history, self.player_2_boats_history, self.player_1_wins_history)

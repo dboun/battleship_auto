@@ -91,7 +91,7 @@ class ModelBase:
                 enemy_hits: np.ndarray,
                 enemy_misses: np.ndarray,
     ) -> tuple[int, int]:
-        print(f"If this is printed, you are using random play. Override.")
+        # print(f"If this is printed, you are using random play. Override.")
 
         # Choose a random position on enemy board that is not already hit/missed
         pos = (np.random.randint(0, 10), np.random.randint(0, 10))

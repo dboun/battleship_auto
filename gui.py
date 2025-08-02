@@ -60,6 +60,8 @@ class BattleshipGUI:
 
     def _draw_board(self, is_player_1: bool, boats, hits, misses) -> None:
         """Render one 10x10 board on the given canvas. Must run on the Tk thread."""
+        # _total_hits_or_misses = np.sum(hits) + np.sum(misses)
+        # print(f"> gui: Drawing board for player {'player 1' if is_player_1 else 'player 2'} (hits/misses: {_total_hits_or_misses})")
         canvas = self.canvas_p1 if is_player_1 else self.canvas_p2
 
         # Determine which cell changed since last frame (i.e. the most recent move)
