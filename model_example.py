@@ -9,8 +9,12 @@ class ModelExample(ModelBase):
         past_enemy_boats: list[np.ndarray],
         past_wins: list[int],
     ) -> np.ndarray:
-        ... # return a 10x10 np.ndarray with 1s for boats and 0s for water
-        return np.zeros((10, 10))
+        # This to use random placement, otherwise code w/e you want:
+        return super().place_boats(
+            past_own_boats=past_own_boats,
+            past_enemy_boats=past_enemy_boats,
+            past_wins=past_wins,
+        )
 
     def play(self,
                 past_own_boats: list[np.ndarray],
