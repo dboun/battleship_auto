@@ -39,7 +39,7 @@ class Game:
 
     def loop_play(self,
         report_board_callback: Callable[[bool, np.ndarray, np.ndarray, np.ndarray], None],
-        sleep_time: float = 0.5,
+        sleep_time: float = 0.1,
     ):
         current_player = random.choice([self.player_1, self.player_2])
         self.player_1_boats = self.player_1.place_boats(self.player_1_boats_history, self.player_2_boats_history, self.player_1_wins_history)
