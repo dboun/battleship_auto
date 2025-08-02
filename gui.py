@@ -4,6 +4,8 @@ import numpy as np
 import threading
 
 from engine import Game
+from model_user import ModelUser
+from model_hardcoded import ModelHardcoded
 
 CELL_SIZE = 30  # pixel size of a single board cell
 grid_size = 10
@@ -12,12 +14,23 @@ grid_size = 10
 class BattleshipGUI:
     """Simple Tkinter visualisation for the Battleships game"""
 
+    # ---- user interaction state -------------------------------------------
+    _waiting_for_click: bool = False  # whether we are currently expecting a user move
+    _click_event: 'threading.Event | None' = None  # event used to signal from UI thread to game thread
+    _click_result: 'tuple[int, int] | None' = None  # coordinates selected by the user
+
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Battleships")
 
+        self.show_boats = False
+
         # Game
-        self.game = Game()
+        self.game = Game(
+            # player_1=ModelUser(fetch_user_move_callback=self.fetch_user_move_callback), 
+            player_1=ModelHardcoded(),
+            player_2=ModelHardcoded()
+        )
         self.game.start_game()
 
         # Track previous hit/miss states to highlight the latest move
@@ -46,6 +59,68 @@ class BattleshipGUI:
 
     # ---- game loop helpers -------------------------------------------------
 
+    def fetch_user_move_callback(self) -> tuple[int, int]:
+        """Block the calling thread until the user clicks a cell on the enemy board.
+
+        This method is executed from the background game loop thread. We cannot
+        directly wait for Tk events on that thread, so we use a threading.Event
+        to bridge between the Tk main (UI) thread and the game thread. When the
+        game expects a move from the human player we:
+
+        1. Create/clear an event and schedule enabling of click handling on the
+           Tk thread via `root.after`.
+        2. Block on the event until a click happens.
+        3. Return the chosen board coordinates (row, col).
+        """
+        # Prepare synchronisation primitives
+        if self._click_event is None:
+            self._click_event = threading.Event()
+        else:
+            self._click_event.clear()
+
+        # Schedule enabling of click mode on UI thread
+        self.root.after(0, self._enable_click_mode)
+
+        # Wait until UI thread signals a click has happened
+        self._click_event.wait()
+
+        # At this point, _click_result should be populated
+        assert self._click_result is not None, "Click result should have been set before event was signalled"
+        return self._click_result
+
+    # ---------------------------------------------------------------------
+    # Internal helpers for handling user clicks (run on the Tk thread)
+    def _enable_click_mode(self):
+        """Enable click handling on the enemy board (canvas_p2)."""
+        # Only enable if not already waiting – guards against double enable
+        if self._waiting_for_click:
+            return
+        self._waiting_for_click = True
+        # Bind mouse click on enemy board (player 2's canvas)
+        self.canvas_p2.bind("<Button-1>", self._on_board_click)
+
+    def _on_board_click(self, event):
+        """Handle a click on the enemy board – executed on Tk thread."""
+        if not self._waiting_for_click:
+            return  # Ignore stray clicks
+
+        col = event.x // CELL_SIZE
+        row = event.y // CELL_SIZE
+
+        # Ensure click is inside the 10x10 board
+        if row < 0 or row >= grid_size or col < 0 or col >= grid_size:
+            return
+
+        # Store result for game thread and clean-up
+        self._click_result = (row, col)
+        self._waiting_for_click = False
+        self.canvas_p2.unbind("<Button-1>")
+
+        # Signal the waiting game thread that the move is ready
+        if self._click_event is not None:
+            self._click_event.set()
+
+    # ---- game loop helpers -------------------------------------------------
     def run_game_loop(self):
         """Run the blocking game loop in a background thread."""
         self.game.loop_play(report_board_callback=self.draw_board)
@@ -79,6 +154,11 @@ class BattleshipGUI:
             # vertical grid line
             canvas.create_line(r * CELL_SIZE, 0, r * CELL_SIZE, grid_size * CELL_SIZE)
 
+        try:
+            is_game_over = np.sum(self.game.player_1_hits) == np.sum(self.game.player_1_boats) or np.sum(self.game.player_2_hits) == np.sum(self.game.player_2_boats)
+        except:
+            is_game_over = False
+
         # draw contents
         for row in range(grid_size):
             for col in range(grid_size):
@@ -90,7 +170,7 @@ class BattleshipGUI:
                     canvas.create_rectangle(x1 + 1, y1 + 1, x2 - 1, y2 - 1, fill="#ffff99", outline="")
 
                 # underlying boat (grey oval)
-                if boats[row, col] == 1:
+                if (self.show_boats or is_game_over) and boats[row, col] == 1:
                     canvas.create_oval(x1 + 4, y1 + 4, x2 - 4, y2 - 4, fill="grey", outline="")
 
                 # overlay with hit / miss marks (takes precedence)
