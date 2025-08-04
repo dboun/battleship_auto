@@ -4,8 +4,10 @@ import numpy as np
 import threading
 
 from engine import Game
+from model_base import ModelBase
 from model_user import ModelUser
 from model_hardcoded import ModelHardcoded
+from model_heatmap import ModelHeatmap
 
 CELL_SIZE = 30  # pixel size of a single board cell
 grid_size = 10
@@ -28,8 +30,10 @@ class BattleshipGUI:
         # Game
         self.game = Game(
             # player_1=ModelUser(fetch_user_move_callback=self.fetch_user_move_callback), 
-            player_1=ModelHardcoded(),
-            player_2=ModelHardcoded()
+            # player_1=ModelHardcoded(),
+            # player_2=ModelHardcoded()
+            player_1=ModelBase(),
+            player_2=ModelHeatmap(),
         )
         self.game.start_game()
 
